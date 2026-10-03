@@ -1,12 +1,12 @@
-# 📋 产品需求文档（PRD）v2.1
+# 📋 产品需求文档（PRD）v2.2
 
 ## 《暗网追凶 —— 论坛推理版》
 
 | 字段 | 内容 |
 |---|---|
-| **文档版本** | v2.1（基于代码实现校准版） |
+| **文档版本** | v2.2（工程重构校准版） |
 | **创建日期** | 2026-08-25 |
-| **更新日期** | 2026-08-27 |
+| **更新日期** | 2026-10-03 |
 | **项目代号** | Project DarkWeb |
 | **产品类型** | Web 端沉浸式网页推理游戏 |
 | **目标平台** | PC 浏览器（优先）、移动端浏览器（已适配） |
@@ -20,7 +20,22 @@
 |---|---|---|
 | v1.0 | 2026-08-25 | 初始版本：线性章节推进的公安内网风格 |
 | v2.0 | 2026-08-26 | 重构版：改为多站点互联网生态 + 碎片化自主推理 |
-| **v2.1** | **2026-08-27** | **基于代码实现校准：更新技术栈版本、调整收集箱阈值(80%→95%)、简化最终推理流程(移除证据链构建)、补充移动端适配细节、标注未实现功能和遗留代码** |
+| v2.1 | 2026-08-27 | 基于代码实现校准：更新技术栈版本、调整收集箱阈值(80%→95%)、简化最终推理流程、补充移动端适配细节 |
+| **v2.2** | **2026-10-03** | **工程重构：web/h5 双端 4400 行重复源码合并为 `shared/` 单一真源；修复 P0 缺陷「线索 P02 永久不可达」；删除全部死代码；新增线索可达性与通关仿真自检；修正本文档中与实现不符的章节** |
+
+### v2.1 → v2.2 核心变更清单
+
+| 变更项 | v2.1（原） | v2.2（现） | 原因 |
+|---|---|---|---|
+| **源码组织** | `web/app/src` 与 `h5/app/src` 各存一份，37/39 个文件完全相同 | `shared/src` 单一真源 + 两个薄外壳工程 | 消除约 4400 行复制粘贴，修复逻辑需改两处 |
+| **线索标记方式** | 页面按关键词猜（`blockText.includes('酒精')`），一个内容块只能映射 1 条线索 | 数据层显式声明 `clueIds: string[]`，一个内容块可映射多条 | **P0**：同一段同时命中两个关键词时，靠后的线索被永久遮蔽 |
+| **P02 线索** | 实际不可获得（被 F04 遮蔽） | 可获得，23 条全部可达 | 修复后收集率上限 100%，95% 阈值留 1 条容错 |
+| **线索 ID 真源** | `gameStore.ts` 硬编码 23 个 ID + `clues.ts` 再定义一遍 | 由 `ALL_CLUES` 派生 | 消灭双份清单 |
+| **收集进度计算** | 线索板/收集箱/推理/结局四处各算一遍 | `computeCollectionStats()` 唯一实现 | 防止口径漂移 |
+| **死代码** | 8 个文件被 tsconfig 排除（其中 `Layout.tsx` 早已编译不过）、`POST_CLUE_MAP`/`NEWS_CLUE_MAP`/`cases.ts` 无人引用、`markable` 字段零读取 | 全部删除 | 被排除的文件等于「假绿灯」，一旦被引用立即构建失败 |
+| **路由门槛** | 仅页面内部重定向，直接敲 URL 可绕过 | `RouteGuards.tsx` 提升到路由层 | Phase 3 / 结局不应被 URL 绕过 |
+| **自定义配置** | oxlint 配置与调用分散在两个工程 | 仓库根一份配置 + 一次调用 | oxlint 不接受含 `..` 的路径参数 |
+| **文档结构** | — | 根 `package.json` 统一脚本，README 说明 shared 架构与验证流程 | 让结构与文档一致 |
 
 ### v2.0 → v2.1 核心变更清单
 
@@ -243,12 +258,14 @@
 | 2 | 环城高速绿化带再现人体残块，警方封锁现场 | 4月20日 | 社会新闻 | — |
 | 3 | 法医专家：三名受害者均死于机械性窒息 | 4月22日 | 案件调查 | F01, F02, E02, F06, E06 |
 | 4 | 警方呼吁市民提供线索，设立举报热线 | 4月23日 | 警方通报 | — |
-| 5 | 物证溯源有突破：包裹材料为本地市场流通品 | 4月25日 | 案件调查 | —（markable 内容块但未映射 clueId） |
+| 5 | 物证溯源有突破：包裹材料为本地市场流通品 | 4月25日 | 案件调查 | T01, E03, E04 |
 | 6 | 现场鞋印曝光：42码运动鞋，驾车特征明显 | 4月26日 | 案件调查 | E01 |
 | 7 | 酒店监控披露：受害者失踪前与一名男性同行 | 4月28日 | 案件调查 | S01 |
-| 8 | 专案组组长陈队：嫌疑人具有较强反侦察能力 | 4月30日 | 案件调查 | —（markable 内容块但未映射 clueId） |
+| 8 | 专案组组长陈队：嫌疑人具有较强反侦察能力 | 4月30日 | 案件调查 | P01 |
 
-> **⚠️ v2.1 已知问题**：news-5（物证溯源）和 news-8（陈队采访）的内容块设有 `markable: true`，但 `clueIds` 数组为空，意味着玩家标记这些内容后，碎片不会被计为有效线索（`isValidClue` 为 false）。这可能导致 95% 的收集率阈值难以达成。建议后续修复：news-5 应映射 T01/E03/E04，news-8 应映射 P01。
+> **v2.2 说明**：news-5 与 news-8 的内容块此前 `clueIds` 为空（标记后不计为有效线索），现已分别映射为
+> T01/E03/E04 与 P01。同时 `markable` 字段因为从未被任何代码读取而整体删除 —— 可标记性现在由
+> 页面渲染规则与 `clueId` 的存在共同决定，并由 `scripts/audit-clues.mjs` 逐条核对。
 
 **新闻文章交互**：
 - 模拟真实新闻网页排版
@@ -354,62 +371,58 @@
 
 #### 3.3.2 收集箱提交
 
-**收集箱审核判定逻辑**（v2.1 实际实现）：
+**收集箱审核判定逻辑**（v2.2：集中到 `shared/src/store/collectionStats.ts`）：
 
 ```typescript
-// 核心计算逻辑
-const uniqueValidClueIds = new Set(
-  markedFragments.filter(f => f.isValidClue && f.clueId).map(f => f.clueId)
-);
-const validClueCount = uniqueValidClueIds.size;    // 去重后的有效线索数
-const invalidClueCount = markedFragments.filter(f => !f.isValidClue).length;
-const collectionRate = validClueCount / 23;          // 总线索23条
-const errorRate = invalidClueCount / totalMarked;
+export function computeCollectionStats(fragments: readonly ClueBearingFragment[]): CollectionStats {
+  const markedCount = fragments.length;
+  const uniqueValidClueIds = new Set(
+    fragments.filter(f => f.isValidClue && f.clueId).map(f => f.clueId)
+  );
+  const validClueCount = uniqueValidClueIds.size;      // 去重后的有效线索数
+  const invalidClueCount = fragments.filter(f => !f.isValidClue).length;
 
-// 判定条件（v2.1：阈值从80%提升至95%）
-const passed = collectionRate >= 0.95 && errorRate <= 0.5;
-// 即：至少收集到 22 条不同的有效线索（去重后），且无效标记占比 ≤ 50%
+  const collectionRate = markedCount > 0 ? validClueCount / TOTAL_CLUE_COUNT : 0;
+  const errorRate = markedCount > 0 ? invalidClueCount / markedCount : 0;
+
+  return { ..., meetsThresholds: collectionRate >= 0.95 && errorRate <= 0.5 };
+}
+// 即：至少收集到 22 条不同的有效线索（去重后），且无效碎片占比 ≤ 50%
 ```
+
+> 线索板、收集箱、最终推理、结局页此前各自手写了一遍这段计算，v2.2 起统一走上面这一个函数，
+> 阈值常量也只在该文件里定义一次。
 
 **提交规则**：
 - 每人最多提交 3 次
 - 审核通过 → 解锁 Phase 3 专案组工作台
 - 3次均不通过 → 触发坏结局
 
-#### 3.3.3 线索分布与标记映射
+#### 3.3.3 线索分布与标记映射（v2.2 改版）
 
-**论坛帖子线索映射（POST_CLUE_MAP）**：
+> **v2.2 变更**：v2.1 曾用 `gameStore.ts` 里的 `POST_CLUE_MAP` / `NEWS_CLUE_MAP` 描述映射关系，
+> 但这两个常量**从未被任何代码引用**，属于文档描述了一个不存在的实现。
+> 现在「哪个内容块承载哪条线索」一律由**数据层显式声明**：
 
-| 帖子ID | 映射线索 | 说明 |
+| 载体 | 声明位置 | 说明 |
 |---|---|---|
-| post-3 | S04 | 夜归人目击深色SUV |
-| post-4 | S02, S03 | 匿名推理迷描述本地口音+外貌特征 |
-| post-5 | P01 | 高速老司机分析反侦察能力 |
-| post-6 | E05, T02 | 植物学研究生分析花粉+产地锁定 |
-| post-7 | P04 | 数据分析帝发现18天作案周期 |
-| post-8 | T01, E03, E04 | 批发商描述垃圾袋/保鲜膜本地流通 |
-| post-9 | F03 | 法医学在读分析分尸手法 |
-| post-11 | T03 | 生活达人溯源口罩品牌 |
-| post-12 | P03 | 推理老手分析无性侵特征 |
+| 论坛帖子 | `forum.ts` 的 `post.clueIds` | 一个帖子可承载多条线索（如 post-8 → T01/E03/E04） |
+| 论坛回复 | `forum.ts` 的 `reply.clueId` | 单条回复承载一条线索 |
+| 新闻段落 | `news.ts` 的 `content[].clueId` | `type: 'heading'` 的段落不渲染标记按钮，因此不得承载线索（自检会拦截） |
+| 人物资料 | `profiles.ts` 的 `occupationClueIds` / `ReviewEntry.clueIds` | **一个段落可承载多条线索**（如 profile-b 同事评价 → F04 + P02） |
+| 地点信息 | 不承载线索 | 仅提供背景与关联跳转 |
 
-**新闻线索映射（NEWS_CLUE_MAP）**：
+**论坛线索分布**：post-3→S04，post-4→S02/S03，post-5→P01，post-6→E05/T02，post-7→P04，
+post-8→T01/E03/E04，post-9→F03，post-11→T03，post-12→P03。
 
-| 新闻ID | 映射线索 | 说明 |
-|---|---|---|
-| news-3 | F01, F02, E02, E06 | 法医专家采访（死因+分尸时间+指纹+土壤） |
-| news-5 | ⚠️ 空数组 | 物证溯源报道（应映射 T01/E03/E04 但未映射） |
-| news-6 | E01 | 鞋印曝光报道 |
-| news-7 | S01 | 酒店监控披露（同行男性，S02 未在映射中） |
-| news-8 | ⚠️ 空数组 | 陈队采访（应映射 P01 但未映射） |
+**新闻线索分布**：news-3→F01/F02/E02/F06/E06，news-5→T01/E03/E04，news-6→E01，
+news-7→S01，news-8→P01。
 
-**人物资料线索映射（PROFILE_CLUE_MAP）**：
+**人物资料线索分布**：profile-a 职业区块→E05；profile-b 邻居评价#1→S03、同事评价#0→F04/P02、
+同事评价#1→F05。
 
-| 资料ID | 映射线索 | 说明 |
-|---|---|---|
-| profile-a | E05 | 张运来与山茶种植园关联 |
-| profile-b | F04, F05, S03, P02 | 李文彬（真凶）的多维度关联 |
-| profile-c | 空 | 赵刚无直接线索映射 |
-| profile-d | 空 | 周明无直接线索映射 |
+> `scripts/audit-clues.mjs` 会逐条核对上表：任何一条线索失去全部载体，或新闻文章级 `clueIds`
+> 与实际可标记段落不一致，`npm run verify` 直接失败。
 
 ### 3.4 Phase 3 详细设计：专案组协同期
 
@@ -605,24 +618,31 @@ const ending = (isCorrect && collectionRate >= 0.95) ? 'good' : 'bad';
 | **结局页** | `/ending` | `EndingPage` | 结局叙事+统计+复盘 | End |
 | **404** | `*` | `Navigate to /` | 未匹配路由重定向到首页 | — |
 
-#### 遗留页面组件（v1.0 遗留，未路由）
+#### 遗留页面组件
 
-| 组件文件 | 说明 | 状态 |
-|---|---|---|
-| `LoginPage.tsx` | v1.0 登录页 | 未使用，可清理 |
-| `DashboardPage.tsx` | v1.0 仪表盘 | 未使用，可清理 |
-| `CaseListPage.tsx` | v1.0 案件列表 | 未使用，可清理 |
-| `InvestigationPage.tsx` | v1.0 调查页 | 未使用，可清理 |
-| `SuspectsPage.tsx` | v1.0 嫌疑人页 | 未使用，可清理 |
-| `ReasoningPage.tsx` | v1.0 推理页 | 未使用，可清理 |
+v2.1 列的 6 个 v1.0 遗留组件（`LoginPage` / `DashboardPage` / `CaseListPage` /
+`InvestigationPage` / `SuspectsPage` / `ReasoningPage`）以及 `CluePanel`、`Layout`
+**已在 v2.2 全部删除**，`tsconfig.app.json` 中对应的 `exclude` 列表也随之移除。
 
 ### 5.2 组件清单
 
-| 组件 | 文件 | 说明 |
+| 组件 | 位置 | 说明 |
 |---|---|---|
-| **BrowserFrame** | `BrowserFrame.tsx` | 浏览器框架组件，包含桌面端地址栏/书签栏 + 移动端顶部导航/底部 TabBar/搜索面板 |
-| **CluePanel** | `CluePanel.tsx` | 线索侧边面板组件（⚠️ 已编写但未在任何路由页面中使用） |
-| **Layout** | `Layout.tsx` | 通用布局组件 |
+| **BrowserFrame（桌面）** | `web/app/src/platform/browser-frame.tsx` | 标签栏 + 地址栏 + 书签栏 |
+| **BrowserFrame（移动）** | `h5/app/src/platform/browser-frame.tsx` | 顶部导航 + 全屏搜索面板 + 底部 TabBar + 「更多」面板 |
+| **MarkButton** | `shared/src/components/MarkButton.tsx` | 统一的「标记为线索」按钮，帖子/回复/新闻段落/人物资料共用 |
+| **RouteGuards** | `shared/src/components/RouteGuards.tsx` | `RequireTeam` / `RequireReasoningReady` / `RequireEnding` |
+
+> **v2.2 变更**：v2.1 把 `BrowserFrame` 描述为「桌面端 + 移动端适配」的单一组件，
+> 实际是两个工程里各自实现的组件；`CluePanel` 与 `Layout` 已随死代码一并删除。
+
+#### 已删除的遗留文件（v2.2）
+
+`LoginPage.tsx`、`DashboardPage.tsx`、`CaseListPage.tsx`、`InvestigationPage.tsx`、
+`SuspectsPage.tsx`、`ReasoningPage.tsx`、`CluePanel.tsx`、`Layout.tsx`。
+其中 `Layout.tsx` 引用了 store 上根本不存在的 `currentCaseId` / `completedChapters` /
+`discoveredClues` / `exitCase` —— 它早已编译不过，只因被 `tsconfig.app.json` 排除才没人发现；
+这类「靠排除维持绿灯」的文件一旦被引用就会立刻打断构建，因此全部清除。
 
 ### 5.3 UI 风格定义
 
@@ -706,7 +726,8 @@ const ending = (isCorrect && collectionRate >= 0.95) ? 'good' : 'bad';
 | **构建工具** | Vite | **8.2.2** | 快速开发体验 |
 | **代码检查** | oxlint | **1.79.0** | 轻量级 lint 工具 |
 | **数据持久化** | LocalStorage | — | 通过 Zustand persist 中间件（key: `darkweb-game-v2`） |
-| **部署** | 静态托管 | — | 纯前端项目，CDN 加速 |
+| **工程组织** | npm workspaces | npm 11 | `shared/` 单一真源 + `web/app`、`h5/app` 两个外壳 |
+| **部署** | 静态托管 | — | 纯前端项目，产物为单文件 HTML，CDN 加速 |
 
 > **v2.1 变更说明**：
 > - React 版本从 18 升级至 **19.2.8**
@@ -745,38 +766,30 @@ const ending = (isCorrect && collectionRate >= 0.95) ? 'good' : 'bad';
 │  ┌──────────────────────────────────────────────────────────┐ │
 │  │                     静态数据层                             │ │
 │  │  forum.ts  │  news.ts  │  profiles.ts  │  places.ts     │ │
-│  │  clues.ts  │  suspects.ts  │  chapters.ts  │  cases.ts  │ │
+│  │  clues.ts  │  suspects.ts  │  chapters.ts  │  reasoning.ts │ │
 │  │  searchIndex.ts  │  reasoning.ts                         │ │
 │  └──────────────────────────────────────────────────────────┘ │
 │                                                               │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-### 6.3 多案件架构（数据层预留）
+### 6.3 多案件架构（v2.2 已移除）
 
-当前数据层采用 `CaseData` 接口组织，`CASES` 数组支持多个案件：
+v2.1 描述的 `CaseData` / `CASES` 多案件数据结构**从未被任何活代码引用**：
+它只被已删除的死文件（`Layout`、`CluePanel`、`CaseListPage`、`DashboardPage`、
+`InvestigationPage`、`ReasoningPage`、`SuspectsPage`）导入，因此随死代码一并删除。
 
-```typescript
-interface CaseData {
-  id: string;
-  caseNumber: string;        // 案件编号，如 'XC-2026-0312'
-  title: string;
-  classification: 'A' | 'B' | 'C';  // 案件等级
-  status: 'active' | 'cold' | 'closed';
-  summary: string;
-  keyFacts: string[];
-  startDate: string;
-  coverEmoji: string;
-  chapters: Chapter[];       // 案件档案（Phase 3 使用）
-  suspects: Suspect[];       // 嫌疑人（审讯系统使用）
-  clues: Clue[];             // 线索定义
-  totalClueCount: number;
-  reasoningQuestion: string;
-  reasoningOptions: ReasoningOption[];
-}
-```
+真凶案件的真实数据组织方式是：
 
-> 当前仅有 `case-001`（连环女性碎尸抛尸案）一个案件，但数据结构支持后续扩展新案件 DLC。
+| 数据 | 位置 |
+|---|---|
+| 线索定义 | `shared/src/data/clues.ts` 的 `ALL_CLUES` |
+| 5 章档案 | `shared/src/data/chapters.ts` 的 `CHAPTERS` |
+| 4 名嫌疑人审讯 | `shared/src/data/suspects.ts` 的 `SUSPECTS` |
+| 核心设问与选项 | `shared/src/data/reasoning.ts` 的 `REASONING_OPTIONS` |
+
+若将来确实要做多案件 DLC，应当先有第二个案件的真实需求，再设计承载它的数据结构，
+而不是长期保留一个无人引用的「预留层」占据类型检查与阅读成本。
 
 ### 6.4 核心数据模型
 
@@ -786,13 +799,11 @@ interface CaseData {
 interface MarkedFragment {
   id: string;
   sourcePageId: string;       // 来源网页 ID（如 'post-3', 'news-6'）
-  sourceBlockId: string;      // 来源内容块 ID
-  content: string;            // 标记的内容文本
-  sourceTitle: string;        // 来源页面标题（v2.1 新增）
-  sourceUrl: string;          // 来源页面 URL（v2.1 新增，用于回溯）
+  sourceBlockId: string;      // 来源内容块 ID，同时作为「是否已标记」的判定键
+  content: string;            // 标记的内容文本（截断到 200 字）
+  sourceTitle: string;        // 来源页面标题
+  sourceUrl: string;          // 来源页面 URL（用于回溯）
   note?: string;              // 玩家批注
-  category?: string;          // 玩家自定义分类
-  linkedTo?: string[];        // 关联的其他碎片 ID
   isValidClue: boolean;       // 是否为有效线索（对应23条之一）
   clueId?: string;            // 对应的线索 ID（如 'E01', 'P04'）
 }
@@ -843,12 +854,7 @@ interface GameState {
   ending: 'good' | 'bad' | null;
 
   // 辅助
-  notebook: string;             // 推理笔记（数据层就绪，UI 未实现）
-
-  // 提示系统（状态预留，触发逻辑未实现）
-  hasSeenHotPosts: boolean;
-  hasSeenForumHint: boolean;
-  lastActivityTime: number;
+  hasSeenHotPosts: boolean;     // 论坛热帖 NEW 角标
 }
 ```
 
@@ -872,11 +878,12 @@ interface GameState {
 | `interrogateSuspect` | `(id: string)` | 标记嫌疑人已审讯 |
 | `setFinalAnswer` | `(answer: string)` | 设置最终推理答案 |
 | `calculateEnding` | `()` | 计算结局（答案B + 收集率≥95% → 好结局） |
-| `updateNotebook` | `(text: string)` | 更新推理笔记（UI 未接入） |
 | `resetGame` | `()` | 重置所有游戏状态 |
 | `markHotPostsSeen` | `()` | 标记已查看热帖 |
-| `markForumHintSeen` | `()` | 标记已查看论坛提示 |
-| `updateActivityTime` | `()` | 更新最后活动时间 |
+
+> **v2.2 删除**：`updateNotebook` / `markForumHintSeen` / `updateActivityTime` 三个 action 及其
+> 状态字段只在 `gameStore.ts` 内部自我引用，从未被任何页面读取，属于「只写不读」的死状态，已移除。
+> 需要这些功能时应连同 UI 一起设计后重新加入。
 
 ---
 
@@ -901,13 +908,16 @@ interface GameState {
 | **跨站关联** | 需要将不同站点的信息碎片关联 | 新闻中的鞋印信息 + 论坛中的花粉信息 + 生活通的种植园信息 |
 | **Phase 3 专属** | 只有进入专案组后才能获得 | 完整法医报告、审讯记录中的矛盾点 |
 
-### 7.3 难度平衡说明（v2.1 新增）
+### 7.3 难度平衡说明（v2.2 更新）
 
-收集箱通过阈值从 v2.0 的 80% 提升至 95%，这意味着：
+收集箱通过阈值为 95%，即：
 - 玩家必须收集到 **至少 22/23 条**不同的有效线索
 - 允许遗漏最多 **1 条**线索
-- 该设计提高了游戏挑战性，要求玩家更深入地探索各个站点
-- 建议修复 news-5 和 news-8 的线索映射问题（详见已知问题章节），否则部分线索可能无法通过正常游戏流程获取
+
+> **v2.2 修复**：v2.1 时期 P02 线索因实现缺陷永久不可达，收集率上限只有 95.65%，
+> 意味着玩家一条都不能漏、且漏的那条恰好只能是 P02 —— 阈值事实上退化为「必须完美」。
+> 修复后 23 条全部可达，95% 阈值才真正拥有设计预期的 1 条容错。
+> `npm run audit:clues` 与 `npm test` 会持续守住这条底线。
 
 ### 7.4 防迷失设计
 
@@ -995,29 +1005,29 @@ interface GameState {
 
 ---
 
-## 十一、已知问题与待办事项（v2.1 新增）
+## 十一、已知问题与待办事项（v2.2 更新）
 
-### 11.1 数据层问题
+### 11.1 已解决的问题（v2.2）
 
-| 优先级 | 问题 | 影响 | 建议修复 |
-|---|---|---|---|
-| **P0** | news-5（物证溯源）的 `clueIds` 为空，但内容块有 `markable: true` | 玩家标记后不计入有效线索，导致 T01/E03/E04 三条线索可能无法通过新闻获取 | 将 news-5 的 `clueIds` 映射为 `['T01', 'E03', 'E04']` |
-| **P0** | news-8（陈队采访）的 `clueIds` 为空 | P01 线索在新闻中无法被正确标记 | 将 news-8 的 `clueIds` 映射为 `['P01']` |
-| **P1** | news-7 的 `clueIds` 仅含 `['S01']`，但内容中有本地口音信息 | S02 线索在新闻中的标记可能不被正确计数 | 补充 `S02` 到 news-7 的 `clueIds` |
-| **P2** | 部分搜索关键词未实现（如"规律"、"时间线"、"杀人案"） | 玩家搜索这些词无结果 | 在 `SEARCH_INDEX` 中补充同义词映射 |
+| 原优先级 | 问题 | 现状 |
+|---|---|---|
+| **P0** | 线索 **P02「解剖常识」永久不可达**：`ProfilePage` 的关键词匹配按数组顺序返回第一个命中项，而 profile-b 的同事评价同一段同时含「酒精」(F04) 与「较真」(P02)，F04 在前导致 P02 被永久遮蔽。收集率上限仅 95.65%，阈值等于「一条都不能漏」 | ✅ 已修复：改由数据层显式声明 `clueIds`，一段可承载多条线索，23 条全部可达 |
+| **P0** | news-5 / news-8 的 `clueIds` 为空，标记后不计入有效线索 | ✅ 已修复并加了自检：`audit-clues.mjs` 会校验文章级 `clueIds` 与实际可标记段落一致 |
+| **P1** | news-7 的 S02 未映射 | ✅ 已核对：S02 由 post-4 承载，news-7 无需重复映射；自检保证每条线索至少有一个载体 |
+| **P2** | 搜索关键词大小写敏感，输入 `suv` 搜不到 `SUV` | ✅ 已修复：`searchAll` / `getSearchSuggestions` 改为大小写无关 |
+| **P3** | 6 个 v1.0 遗留页面 + `CluePanel` + `Layout` 未使用 | ✅ 已删除（连同只被它们引用的 `cases.ts`） |
+| **P2** | 新闻列表页分类 tab 无点击响应 | ✅ 已修复：分类可筛选 |
+| **P2** | 线索板「建立关联」与「查看来源」共用 🔗 图标 | ✅ 已修复：分别改为 🔗 / 👁 并补 `aria-label` |
 
-### 11.2 功能待办
+### 11.2 功能待办（仍未实现）
 
-| 优先级 | 功能 | 状态 | 说明 |
-|---|---|---|---|
-| **P1** | 推理笔记 UI | 数据层就绪，UI 未实现 | 需在 BrowserFrame 或各页面添加笔记入口 |
-| **P1** | 论坛私信提醒 | 状态预留，触发逻辑未实现 | 需基于 `lastActivityTime` 实现停滞检测 |
-| **P2** | 证据链构建 | v2.0 设计但未实现 | 可在后续版本中添加到最终推理阶段 |
-| **P2** | 数据埋点接入 | 所有埋点均未接入 | 需集成分析 SDK |
-| **P2** | 分享卡片生成 | 未实现 | 结局页添加 Canvas 截图分享功能 |
-| **P3** | 帖子内链接渲染 | 帖子为纯文本 | 可解析文本中的引用，渲染为可点击链接 |
-| **P3** | 遗留代码清理 | 6 个 v1.0 页面文件未使用 | 删除 `LoginPage`/`DashboardPage`/`CaseListPage`/`InvestigationPage`/`SuspectsPage`/`ReasoningPage` |
-| **P3** | CluePanel 组件 | 已编写但未使用 | 评估是否作为线索板侧边栏集成，或删除 |
+| 优先级 | 功能 | 说明 |
+|---|---|---|
+| **P1** | 推理笔记 UI | v2.2 已删除数据层中零读取的 `notebook` 字段；如需该功能，应连同 UI 一起设计后再加回 |
+| **P1** | 论坛私信 / 停滞提醒 | v2.2 已删除只写不读的 `lastActivityTime`；实现时应基于真实的活动时间埋点重建 |
+| **P2** | 数据埋点接入 | 所有埋点均未接入，需集成分析 SDK |
+| **P2** | 分享卡片生成 | 结局页可增加 Canvas 截图分享 |
+| **P3** | 帖子内链接渲染 | 帖子正文为纯文本，可解析引用并渲染为可点击链接 |
 
 ---
 
@@ -1025,14 +1035,15 @@ interface GameState {
 
 | 风险 | 影响 | 对策 | 状态 |
 |---|---|---|---|
-| **news-5/news-8 线索映射缺失导致 95% 阈值不可达** | 🔴 高 | 优先修复线索映射，确保 23 条线索均可通过正常流程获取 | 待修复 |
+| **线索不可达导致 95% 阈值不可达成** | 🔴 高 | 已修复 P02 遮蔽缺陷；新增 `audit:clues` 与 `test` 两道自检，纳入 `npm run verify` | ✅ 已解决 |
 | **搜索引擎体验不真实** | 高 | 精心编写搜索摘要和结果排序，模拟真实搜索引擎的 UX | ✅ 基本完成 |
 | **多站点内容开发量大** | 高 | P2 阶段集中内容填充，优先完成核心帖子 | ✅ 已完成 |
-| **线索收集箱判定逻辑不平衡** | 中 | 95% 阈值要求极高，需确保所有线索映射正确 | ⚠️ 待验证 |
+| **线索收集箱判定逻辑不平衡** | 中 | 23 条全部可达后余量为 1 条，符合设计预期；`npm test` 守住边界 | ✅ 已验证 |
 | **沉浸感不足** | 中 | UI 高度还原真实网站风格，文案自然真实 | ✅ 基本完成 |
 | **内容敏感性** | 中 | 避免血腥画面，以文字报告 + 示意图为主 | ✅ 已遵循 |
 | **答案被剧透** | 低 | 核心在于推理过程体验而非答案本身 | 可接受 |
 | **移动端体验不佳** | 低 | 已实现完整响应式 + 移动端专属导航 | ✅ 已完成 |
+| **双端源码漂移** | 中 | v2.2 起合并为 `shared/` 单一真源，两端只保留外壳 | ✅ 已解决 |
 
 ---
 
@@ -1040,58 +1051,60 @@ interface GameState {
 
 ### 13.1 项目文件结构
 
+> v2.2 起，游戏逻辑集中在仓库根的 `shared/`，`web/app` 与 `h5/app` 只保留各自的外壳。
+
 ```
-D:\game\
-├── PRD-深度网页解谜游戏.md       # 本需求文档
-├── 项目背景.txt                   # 案件原始设定
-├── h5/                            # H5 版本（预留目录，暂未开发）
-└── web/app/                       # Web 版前端项目
-    ├── package.json               # 依赖配置
-    └── src/
-        ├── main.tsx               # 应用入口
-        ├── App.tsx                # 路由配置
-        ├── index.css              # 全局样式
-        ├── components/
-        │   ├── BrowserFrame.tsx   # 浏览器框架（桌面+移动端）
-        │   ├── CluePanel.tsx      # 线索面板（未使用）
-        │   └── Layout.tsx         # 布局组件
-        ├── pages/
-        │   ├── BrowserHome.tsx    # 搜索引擎首页
-        │   ├── ForumHome.tsx      # 论坛首页
-        │   ├── ForumPost.tsx      # 帖子详情
-        │   ├── NewsHome.tsx       # 新闻首页
-        │   ├── NewsArticle.tsx    # 新闻文章
-        │   ├── LifeHome.tsx       # 生活通首页
-        │   ├── ProfilePage.tsx    # 人物资料
-        │   ├── PlacePage.tsx      # 地点信息
-        │   ├── SearchResults.tsx  # 搜索结果
-        │   ├── ClueBoardPage.tsx  # 线索板
-        │   ├── CollectionBox.tsx  # 收集箱
-        │   ├── TeamWorkbench.tsx  # 专案组工作台
-        │   ├── TeamInvestigation.tsx # 案件档案
-        │   ├── TeamSuspects.tsx   # 审讯记录
-        │   ├── TeamReasoning.tsx  # 最终推理
-        │   ├── EndingPage.tsx     # 结局页
-        │   ├── LoginPage.tsx      # [遗留] v1.0 登录页
-        │   ├── DashboardPage.tsx  # [遗留] v1.0 仪表盘
-        │   ├── CaseListPage.tsx   # [遗留] v1.0 案件列表
-        │   ├── InvestigationPage.tsx # [遗留] v1.0 调查页
-        │   ├── SuspectsPage.tsx   # [遗留] v1.0 嫌疑人页
-        │   └── ReasoningPage.tsx  # [遗留] v1.0 推理页
-        ├── store/
-        │   └── gameStore.ts       # 全局状态管理
-        └── data/
-            ├── cases.ts           # 案件数据（多案件扩展支持）
-            ├── chapters.ts        # 5 章档案内容
-            ├── clues.ts           # 23 条线索定义
-            ├── forum.ts           # 12+1 篇论坛帖子
-            ├── news.ts            # 8 篇新闻文章
-            ├── places.ts          # 6 个地点信息
-            ├── profiles.ts        # 4 位嫌疑人资料
-            ├── reasoning.ts       # 推理题目与选项
-            ├── searchIndex.ts     # 搜索关键词索引
-            └── suspects.ts        # 嫌疑人审讯数据
+detective-web-game/
+├── package.json                  # 根工程（npm workspaces + 统一脚本）
+├── .oxlintrc.json                # 全仓库共用 lint 配置
+├── README.md                     # 上手、结构说明与验证流程
+├── PRD-深度网页解谜游戏.md         # 本需求文档
+├── 项目背景.txt / 游戏背景.txt     # 案件原始设定
+├── shared/                       # ★ 游戏逻辑单一真源
+│   └── src/
+│       ├── main.tsx              # （已移出）各端入口见 web/app、h5/app
+│       ├── App.tsx               # 路由表 + 路由级门槛
+│       ├── index.css             # 公共样式
+│       ├── components/
+│       │   ├── MarkButton.tsx    # 统一的「标记为线索」按钮
+│       │   └── RouteGuards.tsx   # Phase 3 / 结局路由守卫
+│       ├── pages/                # 17 个页面（桌面/移动共用）
+│       │   ├── BrowserHome / ForumHome / ForumPost
+│       │   ├── NewsHome / NewsArticle / LifeHome / ProfilePage / PlacePage
+│       │   ├── SearchResults / ClueBoardPage / CollectionBox
+│       │   ├── TeamWorkbench / TeamInvestigation / TeamSuspects / TeamReasoning
+│       │   └── EndingPage
+│       ├── store/
+│       │   ├── gameStore.ts      # Zustand 状态 + 存档（persist）
+│       │   ├── collectionStats.ts# 收集进度判定唯一实现
+│       │   └── fragments.ts      # 内容块 → 线索碎片唯一实现
+│       └── data/
+│           ├── clues.ts          # 23 条线索（总数与 ID 集合的真源）
+│           ├── chapters.ts       # 5 章档案
+│           ├── forum.ts          # 12 篇帖子 + 1 篇公告
+│           ├── news.ts           # 8 篇新闻
+│           ├── places.ts         # 6 个地点
+│           ├── profiles.ts       # 4 位嫌疑人资料（含显式 clueIds）
+│           ├── reasoning.ts      # 推理题与选项（正确答案由 isCorrect 派生）
+│           ├── searchIndex.ts    # 搜索关键词索引
+│           └── suspects.ts       # 审讯数据
+├── web/app/                      # 桌面端外壳
+│   ├── index.html
+│   ├── vite.config.ts            # @shared / @platform 别名 + dedupe
+│   ├── tsconfig.app.json
+│   └── src/
+│       ├── main.tsx
+│       └── platform/browser-frame.tsx   # 地址栏 + 书签栏
+├── h5/app/                       # 移动端外壳（结构同上）
+│   └── src/{main.tsx, platform.css, platform/browser-frame.tsx}
+└── scripts/
+    ├── audit-clues.mjs           # 线索可达性自检
+    └── playthrough.mjs           # 通关仿真（真实 store）
 ```
+
+**已删除（v1.0 遗留 + 零引用的死代码）**：`LoginPage`、`DashboardPage`、`CaseListPage`、
+`InvestigationPage`、`SuspectsPage`、`ReasoningPage`、`CluePanel`、`Layout`、`data/cases.ts`，
+以及 `POST_CLUE_MAP` / `NEWS_CLUE_MAP` / `markable` / `notebook` / `lastActivityTime` / `hasSeenForumHint` / `updateActivityTime`。
 
 ### 13.2 参考资料
 
@@ -1115,11 +1128,12 @@ D:\game\
 | Phase 1/2/3 | 游戏的三个递进阶段 |
 | 收集度 | 有效线索数（去重后）/ 总线索数(23) 的百分比 |
 | 错误率 | 无效标记数 / 总标记数的百分比 |
-| BrowserFrame | 浏览器框架组件，包裹所有游戏页面 |
-| CaseData | 案件数据结构，支持多案件扩展 |
+| BrowserFrame | 浏览器框架组件，包裹所有游戏页面（桌面/移动各一份实现） |
+| `shared/` | 两端共用的游戏逻辑目录（页面、数据、状态），单一真源 |
+| `@platform/*` | 指向当前端外壳实现的路径别名 |
 
 ---
 
-> **文档状态：** v2.1 基于代码实现校准完成
+> **文档状态：** v2.2 工程重构校准完成
 >
-> **下一步：** 修复 P0 级线索映射问题 → 实现推理笔记 UI → 接入数据埋点 → 清理遗留代码
+> **下一步：** 接入数据埋点 → 评估推理笔记 / 停滞提醒（需连同 UI 一起设计）→ 分享卡片 → 帖子内链接渲染

@@ -1,0 +1,14 @@
+/* ===== H5 端桌面预览：限制为移动端宽度居中显示 ===== */
+@media (min-width: 768px) {
+  #root {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+
+  body {
+    background-color: #e5e7eb;
+  }
+}

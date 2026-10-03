@@ -1,0 +1,23 @@
+{
+  "name": "detective-web-game",
+  "private": true,
+  "version": "2.2.0",
+  "description": "暗网追凶 —— 深度网页解谜游戏：shared 单一真源 + web/h5 双端外壳",
+  "type": "module",
+  "workspaces": [
+    "web/app",
+    "h5/app"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace web run dev",
+    "dev:h5": "npm --workspace h5 run dev",
+    "build": "npm run build:web && npm run build:h5",
+    "build:web": "npm --workspace web run build",
+    "build:h5": "npm --workspace h5 run build",
+    "typecheck": "npm --workspace web run typecheck && npm --workspace h5 run typecheck",
+    "lint": "oxlint shared/src web/app/src h5/app/src",
+    "test": "node scripts/playthrough.mjs",
+    "audit:clues": "node scripts/audit-clues.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run audit:clues && npm test && npm run build"
+  }
+}

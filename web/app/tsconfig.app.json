@@ -16,21 +16,18 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* 路径别名：游戏逻辑在 ../../shared，外壳在本工程 src/platform
+       （TS 6 起 paths 直接相对本 tsconfig 解析，不再需要 baseUrl） */
+    "paths": {
+      "@shared/*": ["../../shared/src/*"],
+      "@platform/*": ["./src/platform/*"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
-  "exclude": [
-    "src/components/Layout.tsx",
-    "src/components/CluePanel.tsx",
-    "src/pages/CaseListPage.tsx",
-    "src/pages/DashboardPage.tsx",
-    "src/pages/InvestigationPage.tsx",
-    "src/pages/LoginPage.tsx",
-    "src/pages/ReasoningPage.tsx",
-    "src/pages/SuspectsPage.tsx"
-  ]
+  "include": ["src", "../../shared/src"]
 }
